@@ -144,23 +144,21 @@ class World(object):
         # Keep same camera config if the camera manager exists.
         cam_index = self.camera_manager.index if self.camera_manager is not None else 0
         cam_pos_index = self.camera_manager.transform_index if self.camera_manager is not None else 0
-        # Get a random blueprint.
-        blueprint = random.choice(self.world.get_blueprint_library().filter(self._actor_filter))
+        # Get a blueprint of tesla model3.
+        blueprint_library = self.world.get_blueprint_library()
+        blueprint = blueprint_library.find('vehicle.tesla.model3')
         blueprint.set_attribute('role_name', 'hero')
         if blueprint.has_attribute('color'):
-            color = random.choice(blueprint.get_attribute('color').recommended_values)
+            color = blueprint.get_attribute('color').recommended_values[0]
             blueprint.set_attribute('color', color)
         # Spawn the player.
+        spawn_points = self.world.get_map().get_spawn_points()
+        if spawn_points:
+            spawn_point = spawn_points[0]
         if self.player is not None:
-            spawn_point = self.player.get_transform()
-            spawn_point.location.z += 2.0
-            spawn_point.rotation.roll = 0.0
-            spawn_point.rotation.pitch = 0.0
             self.destroy()
-            self.player = self.world.try_spawn_actor(blueprint, spawn_point)
+        self.player = self.world.try_spawn_actor(blueprint, spawn_point)
         while self.player is None:
-            spawn_points = self.world.get_map().get_spawn_points()
-            spawn_point = random.choice(spawn_points) if spawn_points else carla.Transform()
             self.player = self.world.try_spawn_actor(blueprint, spawn_point)
         # Set up the sensors.
         self.collision_sensor = CollisionSensor(self.player, self.hud)
@@ -237,6 +235,7 @@ class DualControl(object):
             self._parser.get('G29 Racing Wheel', 'throttle'))
         self._brake_idx = int(self._parser.get('G29 Racing Wheel', 'brake'))
         self._reverse_idx = int(self._parser.get('G29 Racing Wheel', 'reverse'))
+        self._forward_idx = int(self._parser.get('G29 Racing Wheel', 'forward'))
         self._handbrake_idx = int(
             self._parser.get('G29 Racing Wheel', 'handbrake'))
 
@@ -255,6 +254,8 @@ class DualControl(object):
                     world.next_weather()
                 elif event.button == self._reverse_idx:
                     self._control.gear = -1
+                elif event.button == self._forward_idx:
+                    self._control.gear = 1
                 elif event.button == 23:
                     world.camera_manager.next_sensor()
 
